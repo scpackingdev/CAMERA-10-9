@@ -22,7 +22,7 @@ class Transaction(Base):
     unique_no = Column(String, nullable=True)
     target_qty = Column(Integer, default=10)
     qty_actual = Column(Integer, default=0)
-    status = Column(Integer, default=0)  # 0=Running/Incomplete, 1=OK, 2=NG
+    status = Column(Integer, default=0)  # 0=Standby, 1=Running, 2=OK, 98=NG, 99=Cancel
     start_time = Column(DateTime, nullable=True)
     end_time = Column(DateTime, nullable=True)
 

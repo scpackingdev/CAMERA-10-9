@@ -301,14 +301,17 @@ export default function SisonApiDocs({
             <span className="text-slate-400 font-sans font-bold block uppercase tracking-wider text-[11px]">Format Request Webhook:</span>
             <div><span className="text-slate-500">Method :</span> <span className="text-emerald-400 font-bold">POST</span></div>
             <div><span className="text-slate-500">URL    :</span> <span className="text-blue-300">&lt;Callback Webhook URL Anda&gt;</span></div>
-            <div><span className="text-slate-500">Body   :</span> <span className="text-amber-300">{`{ "id_trans": "TRX-101", "status": 1 }`}</span></div>
+            <div><span className="text-slate-500">Body   :</span> <span className="text-amber-300">{`{ "id_trans": "TRX-101", "status": 2 }`}</span></div>
           </div>
 
           <div className="p-3.5 bg-black/40 border border-white/5 rounded-2xl space-y-2">
-            <span className="text-slate-400 font-sans font-bold block uppercase tracking-wider text-[11px]">Keterangan Nilai Status:</span>
+            <span className="text-slate-400 font-sans font-bold block uppercase tracking-wider text-[11px]">Keterangan Nilai Kode Status SISON:</span>
             <div className="space-y-1 font-sans text-xs text-slate-300">
-              <div><strong className="text-emerald-400 font-mono font-bold">status: 1</strong> = <span className="text-emerald-300 font-semibold">OK</span> (Seluruh komponen lengkap & sesuai standar)</div>
-              <div><strong className="text-rose-400 font-mono font-bold">status: 2</strong> = <span className="text-rose-300 font-semibold">NG</span> (Komponen cacat / ditolak / manual NG operator)</div>
+              <div><strong className="text-slate-400 font-mono font-bold">status: 0</strong> = <span className="text-slate-300 font-semibold">Standby</span> (Belum diproses / Menunggu transaksi)</div>
+              <div><strong className="text-amber-400 font-mono font-bold">status: 1</strong> = <span className="text-amber-300 font-semibold">Sedang Diproses</span> (Running inspeksi)</div>
+              <div><strong className="text-emerald-400 font-mono font-bold">status: 2</strong> = <span className="text-emerald-300 font-semibold">OK / Completed</span> (Lolos semua part 100%)</div>
+              <div><strong className="text-rose-400 font-mono font-bold">status: 98</strong> = <span className="text-rose-300 font-semibold">NG (Reject)</span> (Part cacat / Abnormalitas)</div>
+              <div><strong className="text-purple-400 font-mono font-bold">status: 99</strong> = <span className="text-purple-300 font-semibold">Cancel</span> (Transaksi Kanban dibatalkan)</div>
               <div className="text-slate-400 text-[11px] pt-1">Dilengkapi Auto-Retry 3x otomatis jika ada kendala jaringan.</div>
             </div>
           </div>

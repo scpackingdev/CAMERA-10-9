@@ -360,20 +360,24 @@ export default function OperatorInspection() {
     setShowCancelModal(true);
   };
 
-  const handleCancelKanban = async (reason = 'Stok part pengganti habis') => {
+  const handleCancelKanban = async (reason = 'Stok part pengganti habis', statusCode = 99) => {
     soundManager.stopAll();
     setIsCancelling(true);
     try {
-      const res = await api.post('/api/operator/cancel-kanban', { reason });
+      const res = await api.post('/api/operator/cancel-kanban', { reason, status: statusCode });
       soundManager.stopAll();
       setShowCancelModal(false);
       setShowNgModal(false);
       setShowPartOkModal(false);
-      toast.error(res.data?.message || 'Transaksi Kanban Dibatalkan (Status: 99).', { icon: '⛔', duration: 4000 });
+      const isNg = statusCode === 98;
+      toast.error(
+        res.data?.message || (isNg ? 'Transaksi Ditolak sebagai NG (Status: 98).' : 'Transaksi Kanban Dibatalkan (Status: 99).'), 
+        { icon: isNg ? '❌' : '⛔', duration: 4000 }
+      );
       const stateRes = await api.get('/api/operator/state');
       if (stateRes.data) setTelemetry(stateRes.data);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Gagal membatalkan transaksi Kanban');
+      toast.error(err.response?.data?.detail || 'Gagal memproses transaksi Kanban');
     } finally {
       setIsCancelling(false);
     }
@@ -409,6 +413,8 @@ export default function OperatorInspection() {
         setShowNgModal(false);
         if (actionType === 'CONFIRM_REPLACE') {
           toast.success('Part Cacat Dikonfirmasi. Silakan pasang Part Pengganti Baru!', { icon: '🚨' });
+        } else if (actionType === 'REJECT_NG') {
+          toast.error('Transaksi Ditolak sebagai NG (Status: 98). Callback SISON terkirim.', { icon: '❌', duration: 4000 });
         } else {
           toast.success('Alarm Dimatikan. Memulai Deteksi Ulang Part (Reposisi)...', { icon: '🔄' });
         }

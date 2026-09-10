@@ -176,10 +176,15 @@ python main.py
 ```json
 {
   "id_trans": "TRX-20260814-001",
-  "status": 1
+  "status": 2
 }
 ```
-*(Catatan: `status = 1` menandakan transaksi selesai 100% OK, `status = 2` menandakan part NG / cacat).*
+* **Keterangan Kode Nilai Status SISON**:
+  * `status = 0`: **Standby** (Belum diproses / Menunggu transaksi).
+  * `status = 1`: **Processing** (Sedang diproses / Running inspeksi).
+  * `status = 2`: **OK / Completed** (Inspeksi selesai 100% dan seluruh part lolos uji).
+  * `status = 98`: **NG / Reject** (Inspeksi ditolak / Part cacat).
+  * `status = 99`: **Cancel** (Transaksi Kanban dibatalkan).
 
 ---
 

@@ -34,7 +34,7 @@ def get_models(db: Session = Depends(get_db)):
     if not os.path.exists(WEIGHTS_DIR):
         os.makedirs(WEIGHTS_DIR)
     
-    active_trans = db.query(Transaction).filter(Transaction.status == 2).first()
+    active_trans = db.query(Transaction).filter(Transaction.status == 1).first()
     active_pno = active_trans.part_no if active_trans else ""
 
     parts_dict = {}

@@ -22,6 +22,7 @@ class SoundManager {
 
     // Active Audio Player Refs
     this.activeAudio = null;
+    this.activeFlipAudio = null;
     this.activeNgAudio = null;
 
     // Listeners for UI state reactivity
@@ -222,6 +223,13 @@ class SoundManager {
       } catch {}
       this.activeAudio = null;
     }
+    if (this.activeFlipAudio) {
+      try {
+        this.activeFlipAudio.pause();
+        this.activeFlipAudio.currentTime = 0;
+      } catch {}
+      this.activeFlipAudio = null;
+    }
     this.stopNg();
     if (window.speechSynthesis) {
       try {
@@ -293,11 +301,31 @@ class SoundManager {
     this.playAudioFile(url);
   }
 
-  // --- 2. SUARA BALIK PART (FLIP) ---
+  // --- 2. SUARA BALIK PART (FLIP) — slot audio terpisah agar tidak terpotong oleh playOk ---
   playFlip() {
     const url = this.config.flip_custom_url || '/uploads/audio/default_flip.mp3';
-    this.playAudioFile(url);
+    if (!this.isEnabled || this.volume <= 0 || !url) return;
+    // Hentikan flip sebelumnya jika masih ada
+    if (this.activeFlipAudio) {
+      try { this.activeFlipAudio.pause(); this.activeFlipAudio.currentTime = 0; } catch {}
+      this.activeFlipAudio = null;
+    }
+    try {
+      const audio = new Audio(url);
+      audio.volume = this.volume;
+      const sinkVal = (this.selectedDeviceId && this.selectedDeviceId !== 'default') ? this.selectedDeviceId : '';
+      if (typeof audio.setSinkId === 'function' && sinkVal) {
+        audio.setSinkId(sinkVal).catch(() => {});
+      }
+      audio.onended = () => { if (this.activeFlipAudio === audio) this.activeFlipAudio = null; };
+      const p = audio.play();
+      if (p !== undefined) p.catch(err => console.warn('[SoundManager] playFlip error:', err));
+      this.activeFlipAudio = audio;
+    } catch (err) {
+      console.warn('[SoundManager] playFlip init error:', err);
+    }
   }
+
 
   // --- 3. SUARA ALARM CACAT (NG LOOP) ---
   startNg() {

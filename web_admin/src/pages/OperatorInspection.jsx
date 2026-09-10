@@ -9,7 +9,6 @@ import InspectionHeader from '../components/operator/InspectionHeader';
 import InspectionToolbar from '../components/operator/InspectionToolbar';
 import InspectionCameraFeed from '../components/operator/InspectionCameraFeed';
 import PartOkModal from '../components/operator/PartOkModal';
-import FlipPartModal from '../components/operator/FlipPartModal';
 import NgAlarmModal from '../components/operator/NgAlarmModal';
 import CancelKanbanModal from '../components/operator/CancelKanbanModal';
 import AudioSettingsModal from '../components/operator/AudioSettingsModal';
@@ -48,10 +47,11 @@ export default function OperatorInspection() {
 
   // Modal States
   const [showPartOkModal, setShowPartOkModal] = useState(false);
-  const [showFlipModal, setShowFlipModal] = useState(false);
   const [showNgModal, setShowNgModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  // Ref untuk mencegah suara sisi depan OK diputar lebih dari sekali — track by timestamp event dari backend
+  const frontOkPlayedTsRef = useRef(0);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
 
@@ -304,16 +304,6 @@ export default function OperatorInspection() {
         setShowPartOkModal(false);
       }
 
-      // Trigger 2: Suara Balik Part (Instruksi Sisi Belakang)
-      if (telemetry.popups.flip_part && telemetry.status !== 'STANDBY') {
-        if (!prev.flip_part) {
-          soundManager.playFlip();
-        }
-        setShowFlipModal(true);
-      } else {
-        setShowFlipModal(false);
-      }
-
       // Trigger 3: Suara Alarm Cacat NG
       if (telemetry.popups.ng_active || telemetry.status === 'NG') {
         if (!prev.ng_active && telemetry.status !== 'STANDBY') {
@@ -330,17 +320,40 @@ export default function OperatorInspection() {
       prevPopupsRef.current = { 
         ...telemetry.popups, 
         status: telemetry.status, 
+        current_side: telemetry.current_side,
         qty_remaining: telemetry.qty_remaining,
         qty_actual: telemetry.qty_actual
       };
     }
-  }, [telemetry.popups, telemetry.status, telemetry.qty_remaining, telemetry.qty_actual]);
+  }, [telemetry.popups, telemetry.status, telemetry.current_side, telemetry.qty_completed, telemetry.qty_remaining, telemetry.qty_actual]);
+
+  // Trigger 2 TERPISAH: Suara "Balik Part" (Flip) — watch front_ok_notif_ts secara independen
+  // Dipisah agar tidak terblokir oleh timing prevPopupsRef atau batching SSE
+  useEffect(() => {
+    const notifTs = telemetry.popups?.front_ok_notif_ts || 0;
+    if (
+      notifTs > 0 &&
+      notifTs !== frontOkPlayedTsRef.current &&
+      (Date.now() / 1000 - notifTs) < 5 &&
+      telemetry.status !== 'STANDBY'
+    ) {
+      frontOkPlayedTsRef.current = notifTs;
+      soundManager.playOk();
+      setTimeout(() => soundManager.playFlip(), 1200);
+      toast.success('✅ Sisi Depan OK! Silakan balik part ke Sisi Belakang (REAR)', {
+        id: 'flip-side-toast',
+        icon: '🔄',
+        duration: 3500
+      });
+    }
+  }, [telemetry.popups?.front_ok_notif_ts, telemetry.status]);
 
   useEffect(() => {
     return () => {
       soundManager.stopNg();
     };
   }, []);
+
 
   // Action Handlers
   const handleOpenCancelModal = () => {
@@ -355,7 +368,6 @@ export default function OperatorInspection() {
       soundManager.stopAll();
       setShowCancelModal(false);
       setShowNgModal(false);
-      setShowFlipModal(false);
       setShowPartOkModal(false);
       toast.error(res.data?.message || 'Transaksi Kanban Dibatalkan (Status: 99).', { icon: '⛔', duration: 4000 });
       const stateRes = await api.get('/api/operator/state');
@@ -384,15 +396,6 @@ export default function OperatorInspection() {
       await api.post('/api/operator/clear-popup', { popup_type: 'ALL' });
       const stateRes = await api.get('/api/operator/state');
       if (stateRes.data) setTelemetry(stateRes.data);
-    } catch {}
-  };
-
-  const handleCloseFlipModal = async () => {
-    soundManager.stopAll();
-    ignoreSseRef.current = Date.now() + 1500; // Block stale SSE for 1.5s
-    setShowFlipModal(false);
-    try {
-      await api.post('/api/operator/clear-popup', { popup_type: 'flip_part' });
     } catch {}
   };
 
@@ -437,7 +440,7 @@ export default function OperatorInspection() {
   const isManualMode = isRunning && (telemetry.inspection_mode === 'MANUAL');
   const isNg = telemetry.status === 'NG';
   const isCompleted = telemetry.status === 'COMPLETED';
-  const isPopupVisible = showPartOkModal || showFlipModal;
+  const isPopupVisible = showPartOkModal;
 
   let statusBg = 'bg-blue-900/80 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300';
   let statusText = 'STANDBY';
@@ -449,7 +452,7 @@ export default function OperatorInspection() {
     statusTextColor = 'text-rose-400 font-black';
   } else if (isPopupVisible) {
     statusBg = 'bg-emerald-900/90 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all duration-300';
-    statusText = showFlipModal ? 'MENUNGGU BALIK PART (REAR)' : 'MENUNGGU KONFIRMASI OPERATOR';
+    statusText = 'MENUNGGU KONFIRMASI OPERATOR';
     statusTextColor = 'text-emerald-300 font-black tracking-widest';
   } else if (isCompleted) {
     statusBg = 'bg-sky-950/80 border-sky-500';
@@ -460,13 +463,17 @@ export default function OperatorInspection() {
       statusBg = 'bg-amber-950/80 border-amber-500';
       statusText = 'MODE MANUAL (VISUAL)';
       statusTextColor = 'text-amber-400 font-bold';
+    } else if (telemetry.live_metrics?.is_ng_stabilizing) {
+      statusBg = 'bg-amber-950/90 border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]';
+      statusText = `MEMVERIFIKASI CACAT (${telemetry.live_metrics.ng_progress || 0}%)`;
+      statusTextColor = 'text-amber-300 font-black tracking-wider animate-pulse';
     } else if (telemetry.live_metrics?.is_stabilizing) {
       statusBg = 'bg-teal-950/90 border-teal-400 shadow-[0_0_20px_rgba(20,184,166,0.4)]';
-      statusText = `MEMVERIFIKASI (${telemetry.live_metrics.hold_progress || 0}%)`;
+      statusText = `MEMVERIFIKASI OK (${telemetry.live_metrics.hold_progress || 0}%)`;
       statusTextColor = 'text-teal-300 font-black tracking-wider animate-pulse';
     } else {
       statusBg = 'bg-emerald-950/80 border-emerald-500';
-      statusText = 'DETECT PART';
+      statusText = telemetry.current_side === 'REAR' ? 'DETECT PART (SISI REAR)' : 'DETECT PART (SISI FRONT)';
       statusTextColor = 'text-emerald-400 font-bold';
     }
   }
@@ -519,13 +526,6 @@ export default function OperatorInspection() {
           telemetry={telemetry}
           onClose={handleClosePartOkModal}
           onFinishBatch={handleFinishBatch}
-        />
-
-        {/* DRAGGABLE FLOATING POPUP: SISI DEPAN OK */}
-        <FlipPartModal
-          isOpen={showFlipModal}
-          telemetry={telemetry}
-          onClose={handleCloseFlipModal}
         />
 
         {/* DRAGGABLE FLOATING POPUP: NG ABNORMALITY & 3 OPSI KEPUTUSAN */}

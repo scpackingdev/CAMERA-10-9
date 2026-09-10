@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db, PartRule, Transaction, log_audit_event
 from api.auth import get_current_user_name
 from core import model_cache
+from core.rules import is_defect_label
 from .rule_routes import get_or_create_global_settings
 
 router = APIRouter()
@@ -165,6 +166,8 @@ def get_model_detail(part_no: str, db: Session = Depends(get_db)):
                     names = [str(v) for k, v in sorted(raw.items(), key=lambda x: int(x[0]))]
             if names:
                 for label in names:
+                    if is_defect_label(label):
+                        continue
                     raw_lbl = str(label).strip()
                     first_tok = raw_lbl.split('-')[0].strip().upper() if '-' in raw_lbl else (raw_lbl.split('_')[0].strip().upper() if '_' in raw_lbl else raw_lbl[:1].upper())
                     sisi_val = first_tok if first_tok in ['F', 'R', 'FRONT', 'REAR'] else (first_tok or "-")
@@ -232,6 +235,9 @@ def upload_model(
                     db.query(PartRule).filter(PartRule.p_no == safe_part_no).delete()
                     db.flush()
                     for label in names:
+                        # Jangan masukkan label defect/NG ke tabel PartRule (Checklist Komponen Wajib)
+                        if is_defect_label(label):
+                            continue
                         raw_lbl = str(label).strip()
                         first_tok = raw_lbl.split('-')[0].strip().upper() if '-' in raw_lbl else (raw_lbl.split('_')[0].strip().upper() if '_' in raw_lbl else raw_lbl[:1].upper())
                         detected_sisi = first_tok if first_tok in ['F', 'R', 'FRONT', 'REAR'] else (first_tok or "-")

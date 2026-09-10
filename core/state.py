@@ -16,12 +16,15 @@ class SystemState:
         self.cooldown_until: float = 0.0
         self.inspection_mode: str = "AI"  # "AI" or "MANUAL"
         self.part_ok_popup: bool = False
+        self.front_ok_notif_ts: float = 0.0  # Timestamp kapan sisi Depan (Front) berhasil OK — bukan bool, agar tidak dikonsumsi habis oleh 1 SSE call
         self.current_side: str = "F"      # "F" = Front, "R" = Rear
         self.flip_part_popup: bool = False
         self.last_inspection_details: dict = {}
         self.live_metrics: dict = {}
         self.ok_start_time: float = 0.0
         self.hold_duration: float = 1.2
+        self.ng_start_time: float = 0.0
+        self.ng_hold_duration: float = 1.0
         self.completed_time: float = 0.0
         self.operator_name: str = ""       # Nama operator utama
         self.operator_username: str = ""   # Username operator utama
@@ -111,10 +114,12 @@ class SystemState:
             self.completed_time = 0.0
             self.inspection_mode = "AI"
             self.part_ok_popup = False
+            self.front_ok_notif_ts = 0.0
             self.flip_part_popup = False
             self.last_inspection_details = {}
             self.live_metrics = {}
             self.ok_start_time = 0.0
+            self.ng_start_time = 0.0
 
     def recover_pending_inspection_state(self):
         """
@@ -174,6 +179,7 @@ class SystemState:
                     self.aturan_sisi = aturan_sisi
                     self.operator_name = last_op
                     self.part_ok_popup = False
+                    self.front_ok_notif_ts = 0.0
                     self.flip_part_popup = False
                     self.ok_start_time = 0.0
 

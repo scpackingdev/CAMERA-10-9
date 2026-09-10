@@ -11,7 +11,7 @@ export default function PartOkModal({
   if (!isOpen) return null;
 
   const isFinalPart = telemetry.qty_remaining <= 0 || telemetry.status === 'COMPLETED';
-  const currentPartNum = isFinalPart ? (telemetry.target_qty || 2) : ((telemetry.qty_completed || 0) + 1);
+  const currentPartNum = isFinalPart ? (telemetry.target_qty || 2) : (telemetry.qty_completed || 1);
 
   return (
     <DraggableFloatingCard
@@ -29,12 +29,12 @@ export default function PartOkModal({
           </div>
           <div className="min-w-0">
             <h3 className="text-base sm:text-lg font-black text-white leading-tight">
-              {isFinalPart ? "Seluruh Part Selesai Diinspeksi!" : "Part berhasil terdeteksi!"}
+              {isFinalPart ? "Seluruh Part Selesai Diinspeksi!" : `Part #${currentPartNum} Berhasil Terverifikasi!`}
             </h3>
             <p className="text-xs text-emerald-300 font-bold mt-0.5 truncate">
               {isFinalPart
                 ? `Semua sisi part (${telemetry.target_qty || 2} PCS) terdeteksi dengan status OK.`
-                : `Sisi Depan & Belakang OK. Sisa: ${telemetry.qty_remaining} PCS.`}
+                : `Part #${currentPartNum} OK. Sisa: ${telemetry.qty_remaining} PCS.`}
             </p>
           </div>
         </div>

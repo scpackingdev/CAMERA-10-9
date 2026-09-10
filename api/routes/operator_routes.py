@@ -75,6 +75,8 @@ def _get_operator_state_dict() -> dict:
         flip_part = getattr(state, 'flip_part_popup', False)
         details = dict(state.last_inspection_details) if hasattr(state, 'last_inspection_details') else {}
         live_metrics = dict(state.live_metrics) if hasattr(state, 'live_metrics') else {}
+        # Kirim timestamp ke frontend — frontend yang memutuskan apakah event ini baru (< 3 detik)
+        front_ok_notif_ts = getattr(state, 'front_ok_notif_ts', 0.0)
 
     ng_active = bool(stream_worker.ng_active or cur_status == "NG")
 
@@ -100,6 +102,8 @@ def _get_operator_state_dict() -> dict:
         "popups": {
             "part_ok": part_ok,
             "flip_part": flip_part,
+            "front_ok_notif": (time.time() - front_ok_notif_ts) < 3.0 if front_ok_notif_ts > 0 else False,
+            "front_ok_notif_ts": front_ok_notif_ts,
             "ng_active": ng_active,
             "ng_image_url": "",
             "details": details
@@ -221,7 +225,7 @@ def manual_pass():
         
         if cur_side == "F" and has_rear:
             state.current_side = "R"
-            state.flip_part_popup = True
+            state.flip_part_popup = False
             state.part_ok_popup = False
             
             state.last_inspection_details = {

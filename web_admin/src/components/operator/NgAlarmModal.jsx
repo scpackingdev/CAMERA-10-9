@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, RotateCcw, CheckCircle2, Ban } from 'lucide-react';
+import { ShieldAlert, RotateCcw, CheckCircle2, Ban, XCircle } from 'lucide-react';
 import DraggableFloatingCard from './DraggableFloatingCard';
 
 export default function NgAlarmModal({
@@ -52,14 +52,14 @@ export default function NgAlarmModal({
           </div>
         </div>
 
-        {/* 3 Opsi Keputusan Tindakan */}
+        {/* 4 Opsi Keputusan Tindakan */}
         <div className="space-y-2 pt-1">
           {/* Opsi 1: Model Salah Baca / Part Sebenarnya Bagus */}
           <button
             type="button"
             disabled={ngResolving}
             onClick={() => onResolveNg('RETRY')}
-            className="w-full py-2.5 px-3 bg-gradient-to-r from-sky-700 to-blue-700 hover:from-sky-600 hover:to-blue-600 text-white font-bold rounded-xl shadow-md border border-sky-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
+            className="w-full py-2 px-3 bg-gradient-to-r from-sky-700 to-blue-700 hover:from-sky-600 hover:to-blue-600 text-white font-bold rounded-xl shadow-md border border-sky-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-sky-200 shrink-0" />
@@ -73,7 +73,7 @@ export default function NgAlarmModal({
             type="button"
             disabled={ngResolving}
             onClick={() => onResolveNg('CONFIRM_REPLACE')}
-            className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold rounded-xl shadow-md border border-amber-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
+            className="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold rounded-xl shadow-md border border-amber-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-amber-200 shrink-0" />
@@ -82,18 +82,32 @@ export default function NgAlarmModal({
             <span className="text-[10px] bg-amber-950/80 px-2 py-0.5 rounded text-amber-200 border border-amber-400/30">Ada Pengganti</span>
           </button>
 
-          {/* Opsi 3: Benar-benar NG & Part Pengganti HABIS (Cancel Kanban) */}
+          {/* Opsi 3: Benar-benar NG & Selesaikan Transaksi Sebagai NG (Status 98) */}
+          <button
+            type="button"
+            disabled={ngResolving}
+            onClick={() => onResolveNg('REJECT_NG')}
+            className="w-full py-2 px-3 bg-gradient-to-r from-rose-700 via-rose-600 to-red-700 hover:from-rose-600 hover:to-red-600 text-white font-bold rounded-xl shadow-md border border-rose-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-2">
+              <XCircle className="w-4 h-4 text-rose-200 shrink-0" />
+              <span className="text-left font-black tracking-wide">❌ AKHIRI SEBAGAI NG</span>
+            </div>
+            <span className="text-[10px] bg-rose-950/90 px-2 py-0.5 rounded text-rose-200 border border-rose-500/40 font-bold">Status 98 (NG)</span>
+          </button>
+
+          {/* Opsi 4: Batalkan Kanban (Status 99) */}
           <button
             type="button"
             disabled={ngResolving}
             onClick={onOpenCancelKanban}
-            className="w-full py-2.5 px-3 bg-gradient-to-r from-rose-800 via-rose-700 to-red-800 hover:from-rose-700 hover:to-red-700 text-white font-bold rounded-xl shadow-md border border-rose-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
+            className="w-full py-2 px-3 bg-gradient-to-r from-purple-800 via-indigo-800 to-purple-900 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-md border border-purple-400/40 text-xs flex items-center justify-between transition-all cursor-pointer disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
-              <Ban className="w-4 h-4 text-rose-300 shrink-0" />
-              <span className="text-left font-black tracking-wide text-rose-100">⛔ BATALKAN KANBAN</span>
+              <Ban className="w-4 h-4 text-purple-300 shrink-0" />
+              <span className="text-left font-black tracking-wide text-purple-100">⛔ BATALKAN KANBAN</span>
             </div>
-            <span className="text-[10px] bg-rose-950/90 px-2 py-0.5 rounded text-rose-200 border border-rose-500/40 font-bold">Stok Habis (Status 99)</span>
+            <span className="text-[10px] bg-purple-950/90 px-2 py-0.5 rounded text-purple-200 border border-purple-500/40 font-bold">Status 99 (Cancel)</span>
           </button>
         </div>
       </div>

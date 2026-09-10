@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, CheckCircle, Clock, AlertOctagon, Trash2, TrendingUp } from 'lucide-react';
+import { Activity, CheckCircle, Clock, AlertOctagon, XCircle, Trash2, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import PageHeader from '../components/PageHeader';
@@ -27,21 +27,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchTransactions();
-    const interval = setInterval(fetchTransactions, 1000);
+    const interval = setInterval(fetchTransactions, 2000);
     return () => clearInterval(interval);
   }, []);
 
   const handleClearRunning = async () => {
-    setShowClearModal(false);
     setClearing(true);
     try {
       const res = await api.delete('/api/admin/transactions/running');
-      if (res.data && res.data.success) {
-        toast.success(res.data.message || 'Transaksi RUNNING berhasil dibersihkan!');
-        fetchTransactions();
-      }
+      toast.success(res.data?.message || 'Transaksi RUNNING berhasil dibersihkan');
+      setShowClearModal(false);
+      fetchTransactions();
     } catch (err) {
-      toast.error('Gagal membersihkan data RUNNING');
+      toast.error(err.response?.data?.detail || 'Gagal membersihkan transaksi RUNNING');
     } finally {
       setClearing(false);
     }
@@ -50,10 +48,11 @@ export default function Dashboard() {
   const totalCount = transactions.length;
   const okCount = transactions.filter(t => t.status === 2).length;
   const runningCount = transactions.filter(t => t.status === 1).length;
+  const ngCount = transactions.filter(t => t.status === 98).length;
   const cancelCount = transactions.filter(t => t.status === 99).length;
 
   // Calculate Yield Rate (% OK)
-  const completedTotal = okCount + cancelCount;
+  const completedTotal = okCount + ngCount + cancelCount;
   const passRateVal = completedTotal > 0 ? (okCount / completedTotal) * 100 : 100;
   const passRateStr = passRateVal.toFixed(1) + '%';
   const yieldColor = passRateVal >= 95 ? 'emerald' : (passRateVal >= 85 ? 'amber' : 'rose');
@@ -73,13 +72,14 @@ export default function Dashboard() {
         subtitle="Pemantauan transaksi inspeksi kamera secara real-time"
       />
 
-      {/* Stat Cards (5 Cards Layout) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Stat Cards (6 Cards Layout) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <StatCard title="Total Transaksi" value={totalCount} icon={Activity} color="blue" />
         <StatCard title="Inspeksi OK (Status 2)" value={okCount} icon={CheckCircle} color="emerald" />
         <StatCard title="Yield Rate (% OK)" value={passRateStr} icon={TrendingUp} color={yieldColor} />
         <StatCard title="Proses Running (Status 1)" value={runningCount} icon={Clock} color="amber" />
-        <StatCard title="Batal (Status 99)" value={cancelCount} icon={AlertOctagon} color="rose" />
+        <StatCard title="Inspeksi NG (Status 98)" value={ngCount} icon={XCircle} color="rose" />
+        <StatCard title="Batal (Status 99)" value={cancelCount} icon={AlertOctagon} color="purple" />
       </div>
 
       {/* Live Table */}

@@ -10,6 +10,7 @@ export default function CancelKanbanModal({
   onConfirmCancel
 }) {
   const [reason, setReason] = useState('Stok part pengganti habis');
+  const [statusCode, setStatusCode] = useState(99);
 
   if (!isOpen) return null;
 
@@ -17,30 +18,47 @@ export default function CancelKanbanModal({
   const remQty = telemetry.qty_remaining !== undefined ? telemetry.qty_remaining : (telemetry.qty || 0);
   const compQty = Math.max(0, targetQty - remQty);
 
+  const handleReasonChange = (newReason) => {
+    setReason(newReason);
+    if (newReason.includes('cacat') || newReason.includes('abnormalitas')) {
+      setStatusCode(98);
+    }
+  };
+
   const handleConfirm = () => {
-    onConfirmCancel(reason);
+    onConfirmCancel(reason, statusCode);
   };
 
   return (
     <DraggableFloatingCard
-      title="BATALKAN KANBAN"
-      badge="KONFIRMASI PEMBATALAN"
-      color="rose"
+      title={statusCode === 98 ? "TOLAK TRANSAKSI (NG)" : "BATALKAN KANBAN"}
+      badge="KONFIRMASI AKHIR"
+      color={statusCode === 98 ? "rose" : "purple"}
       icon={OctagonAlert}
       onClose={onClose}
     >
       <div className="space-y-3.5 text-left">
         {/* Banner Peringatan Industrial */}
-        <div className="flex items-start gap-3 bg-rose-950/80 border-2 border-rose-500/50 p-3 rounded-2xl shadow-inner">
-          <div className="w-9 h-9 rounded-xl bg-rose-600/30 border border-rose-400 flex items-center justify-center text-rose-300 shrink-0 mt-0.5">
+        <div className={`flex items-start gap-3 border-2 p-3 rounded-2xl shadow-inner ${
+          statusCode === 98
+            ? 'bg-rose-950/80 border-rose-500/50'
+            : 'bg-purple-950/80 border-purple-500/50'
+        }`}>
+          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${
+            statusCode === 98
+              ? 'bg-rose-600/30 border-rose-400 text-rose-300'
+              : 'bg-purple-600/30 border-purple-400 text-purple-300'
+          }`}>
             <Ban className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-sm sm:text-base font-black text-white leading-tight">
-              Hentikan Transaksi Kanban Ini?
+              {statusCode === 98 ? "Akhiri Sebagai NG (Status 98)?" : "Batalkan Transaksi Kanban Ini?"}
             </h3>
-            <p className="text-xs text-rose-300/90 font-medium mt-0.5 leading-relaxed">
-              Gunakan opsi ini jika part NG ditemukan dan <strong className="text-rose-100 font-bold">stok part pengganti tidak tersedia</strong>.
+            <p className="text-xs text-slate-300 font-medium mt-0.5 leading-relaxed">
+              {statusCode === 98
+                ? "Hasil transaksi akan dikirim ke server SISON sebagai status 98 (NG / Reject)."
+                : "Transaksi akan dihentikan dan dikirim ke server SISON sebagai status 99 (Cancel)."}
             </p>
           </div>
         </div>
@@ -63,20 +81,55 @@ export default function CancelKanbanModal({
           </div>
           <div className="flex items-center justify-between pt-0.5">
             <span className="text-slate-400 font-bold uppercase">Callback SISON:</span>
-            <span className="font-mono font-black text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30">
-              STATUS 99 (CANCEL)
+            <span className={`font-mono font-black px-2 py-0.5 rounded border ${
+              statusCode === 98
+                ? 'text-rose-400 bg-rose-500/20 border-rose-500/40'
+                : 'text-purple-300 bg-purple-500/20 border-purple-500/40'
+            }`}>
+              STATUS {statusCode} ({statusCode === 98 ? 'NG / REJECT' : 'CANCEL'})
             </span>
           </div>
         </div>
 
-        {/* Pilihan Alasan Pembatalan */}
+        {/* Pemilihan Kode Status SISON */}
         <div className="space-y-1.5">
           <label className="text-[11px] font-extrabold uppercase text-slate-300 block tracking-wide">
-            Alasan Pembatalan:
+            Pilih Status Akhir ke SISON:
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setStatusCode(99)}
+              className={`py-2 px-2.5 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusCode === 99
+                  ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-900/50'
+                  : 'bg-slate-900/90 text-slate-400 border-white/10 hover:text-white'
+              }`}
+            >
+              <span>Status 99 (BATAL)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusCode(98)}
+              className={`py-2 px-2.5 rounded-xl border text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                statusCode === 98
+                  ? 'bg-rose-600 text-white border-rose-400 shadow-md shadow-rose-900/50'
+                  : 'bg-slate-900/90 text-slate-400 border-white/10 hover:text-white'
+              }`}
+            >
+              <span>Status 98 (NG)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Pilihan Alasan Pembatalan / Reject */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-extrabold uppercase text-slate-300 block tracking-wide">
+            Alasan:
           </label>
           <select
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => handleReasonChange(e.target.value)}
             className="w-full bg-slate-900 border border-white/20 rounded-xl py-2 px-3 text-xs text-white font-medium focus:outline-none focus:border-rose-400 transition-colors cursor-pointer"
           >
             <option value="Stok part pengganti habis">Stok part pengganti habis / kosong</option>
@@ -102,10 +155,18 @@ export default function CancelKanbanModal({
             type="button"
             disabled={isCancelling}
             onClick={handleConfirm}
-            className="w-full py-2.5 px-3 bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black rounded-xl shadow-lg shadow-rose-600/50 text-xs uppercase tracking-wide transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98]"
+            className={`w-full py-2.5 px-3 font-black rounded-xl shadow-lg text-xs uppercase tracking-wide transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] text-white ${
+              statusCode === 98
+                ? 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 shadow-rose-600/50'
+                : 'bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-600 hover:to-indigo-500 shadow-purple-600/50'
+            }`}
           >
             <Ban className="w-4 h-4" />
-            <span>{isCancelling ? 'Membatalkan...' : 'Ya, Batalkan'}</span>
+            <span>
+              {isCancelling
+                ? 'Memproses...'
+                : (statusCode === 98 ? 'Ya, Tolak NG (98)' : 'Ya, Batalkan (99)')}
+            </span>
           </button>
         </div>
       </div>

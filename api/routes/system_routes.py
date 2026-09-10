@@ -104,8 +104,8 @@ def get_transactions(date_filter: Optional[str] = None, db: Session = Depends(ge
 
 @router.delete("/transactions/running")
 def clear_running_transactions(db: Session = Depends(get_db), uname: str = Depends(get_current_user_name)):
-    """Hapus seluruh transaksi berstatus RUNNING (status=2) dari database."""
-    deleted_count = db.query(Transaction).filter(Transaction.status == 2).delete()
+    """Hapus seluruh transaksi berstatus RUNNING (status=1) dari database."""
+    deleted_count = db.query(Transaction).filter(Transaction.status == 1).delete()
     db.commit()
     log_audit_event(db, uname, "DELETE_RUNNING_TRANS", f"Menghapus {deleted_count} transaksi ber-status RUNNING")
     return {"success": True, "count": deleted_count, "message": f"Berhasil menghapus {deleted_count} transaksi RUNNING."}

@@ -113,7 +113,7 @@ Dokumen Manual Book ini disusun sebagai panduan teknis dan operasional resmi bag
 │  • integrations/        : SISON Webhook Callback Sender & SQLite Buffer     │
 └──────────────────┬──────────────────────────────────────────────────────────┘
                    │
-                   │ 3. POST Callback Webhook: { "id_trans": "...", "status": 1 }
+                   │ 3. POST Callback Webhook: { "id_trans": "...", "status": 2 }
                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                             SERVER BACKEND SISON                            │
@@ -244,7 +244,7 @@ Saat database pertama kali diinisialisasi, sistem otomatis menyediakan akun bawa
 Integrasi bekerja menggunakan arsitektur **Machine-to-Machine**:
 1. **Trigger Mulai (SISON ➔ Kamera):** Server SISON memanggil `POST http://<IP_KAMERA>:8000/api/start` dengan menyertakan **Bearer Service Token** di header HTTP.
 2. **Proses Inspeksi:** Kamera menerima Part Number, mencocokkan model AI `.pt` yang sesuai, dan memverifikasi kelengkapan komponen.
-3. **Hasil Callback (Kamera ➔ SISON):** Kamera mengirimkan HTTP `POST` ke Callback URL SISON dengan payload status: `1` (OK) atau `2` (NG).
+3. **Hasil Callback (Kamera ➔ SISON):** Kamera mengirimkan HTTP `POST` ke Callback URL SISON dengan payload kode status: `2` (OK), `98` (NG / Cacat), atau `99` (Cancel).
 
 ---
 
@@ -302,12 +302,15 @@ Untuk menjaga keamanan API tanpa membebani operator di line produksi:
   ```json
   {
     "id_trans": "TRX-20260821-0001",
-    "status": 1
+    "status": 2
   }
   ```
-* **Kode Status:**
-  * `status: 1` ➔ **OK / PASS** (Komponen lengkap dan sesuai standar).
-  * `status: 2` ➔ **NG / REJECT** (Komponen cacat / hilang / reject manual).
+* **Keterangan Standar Kode Status SISON:**
+  * `status: 0` ➔ **Standby** (Belum diproses / Menunggu transaksi).
+  * `status: 1` ➔ **Processing** (Sedang diproses / Running inspeksi).
+  * `status: 2` ➔ **OK / PASS** (Inspeksi selesai 100% dan seluruh part lolos standar).
+  * `status: 98` ➔ **NG / REJECT** (Komponen cacat / ditolak).
+  * `status: 99` ➔ **CANCEL** (Transaksi Kanban dibatalkan).
 
 ---
 

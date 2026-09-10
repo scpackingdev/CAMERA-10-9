@@ -18,7 +18,8 @@ class SisonSender:
         Mengirim status hasil inspeksi ke server SISON dengan Auto-Retry hingga 3x:
         - 0  = Standby (Belum diproses)
         - 1  = Processing (Sedang diproses / Running)
-        - 2  = OK (Inspeksi selesai & lolos semua part)
+        - 2  = OK / Completed (Inspeksi selesai & lolos semua part)
+        - 98 = NG (Inspeksi ditolak / Part cacat / Reject)
         - 99 = Cancel (Transaksi Kanban dibatalkan / Cancel Kanban)
         """
         url = get_callback_url()

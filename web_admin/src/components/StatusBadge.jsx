@@ -11,8 +11,11 @@ export default function StatusBadge({ status, className = "" }) {
     } else if (status === 1) {
       badgeStyle = "bg-amber-500/15 text-amber-400 border-amber-500/40 animate-pulse";
       text = "RUNNING / PROSES";
+    } else if (status === 98) {
+      badgeStyle = "bg-rose-500/15 text-rose-400 border-rose-500/40 animate-pulse";
+      text = "NG (REJECT)";
     } else if (status === 99) {
-      badgeStyle = "bg-rose-500/15 text-rose-400 border-rose-500/40";
+      badgeStyle = "bg-purple-500/15 text-purple-300 border-purple-500/40";
       text = "BATAL (CANCEL)";
     } else if (status === 0) {
       badgeStyle = "bg-slate-800/90 text-slate-300 border-slate-600/50";

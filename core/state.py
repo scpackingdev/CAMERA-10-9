@@ -16,6 +16,7 @@ class SystemState:
         self.cooldown_until: float = 0.0
         self.inspection_mode: str = "AI"  # "AI" or "MANUAL"
         self.part_ok_popup: bool = False
+        self.part_ok_ts: float = 0.0
         self.front_ok_notif_ts: float = 0.0  # Timestamp kapan sisi Depan (Front) berhasil OK — bukan bool, agar tidak dikonsumsi habis oleh 1 SSE call
         self.current_side: str = "F"      # "F" = Front, "R" = Rear
         self.flip_part_popup: bool = False

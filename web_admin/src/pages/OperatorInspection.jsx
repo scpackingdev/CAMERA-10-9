@@ -339,7 +339,6 @@ export default function OperatorInspection() {
     ) {
       frontOkPlayedTsRef.current = notifTs;
       soundManager.playOk();
-      setTimeout(() => soundManager.playFlip(), 1200);
       toast.success('✅ Sisi Depan OK! Silakan balik part ke Sisi Belakang (REAR)', {
         id: 'flip-side-toast',
         icon: '🔄',

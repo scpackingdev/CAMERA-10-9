@@ -73,11 +73,14 @@ def _get_operator_state_dict() -> dict:
         op_role = state.operator_role
         op_login_ts = state.operator_login_time
         part_ok = getattr(state, 'part_ok_popup', False)
+        part_ok_ts = getattr(state, 'part_ok_ts', 0.0)
+        is_part_ok = bool(part_ok_ts > 0 and (time.time() - part_ok_ts) < 2.0)
         flip_part = getattr(state, 'flip_part_popup', False)
         details = dict(state.last_inspection_details) if hasattr(state, 'last_inspection_details') else {}
         live_metrics = dict(state.live_metrics) if hasattr(state, 'live_metrics') else {}
-        # Kirim timestamp ke frontend — frontend yang memutuskan apakah event ini baru (< 3 detik)
+        # Kirim timestamp ke frontend — frontend yang memutuskan apakah event ini baru (< 2.5 detik)
         front_ok_notif_ts = getattr(state, 'front_ok_notif_ts', 0.0)
+        is_front_ok = bool(front_ok_notif_ts > 0 and (time.time() - front_ok_notif_ts) < 2.5)
 
     ng_active = bool(stream_worker.ng_active or cur_status == "NG")
 
@@ -101,9 +104,9 @@ def _get_operator_state_dict() -> dict:
             "login_time": op_login_ts
         },
         "popups": {
-            "part_ok": part_ok,
-            "flip_part": flip_part,
-            "front_ok_notif": (time.time() - front_ok_notif_ts) < 3.0 if front_ok_notif_ts > 0 else False,
+            "part_ok": part_ok or is_part_ok,
+            "flip_part": flip_part or is_front_ok,
+            "front_ok_notif": is_front_ok,
             "front_ok_notif_ts": front_ok_notif_ts,
             "ng_active": ng_active,
             "ng_image_url": "",
@@ -229,6 +232,7 @@ def manual_pass():
             state.current_side = "R"
             state.flip_part_popup = False
             state.part_ok_popup = False
+            state.front_ok_notif_ts = time.time()
             
             state.last_inspection_details = {
                 "label_terdeteksi": "Pemeriksaan Visual Sisi Depan",
@@ -252,11 +256,13 @@ def manual_pass():
             if rem_qty <= 0:
                 state.status = "COMPLETED"
                 state.part_ok_popup = True
+                state.part_ok_ts = time.time()
                 state.flip_part_popup = False
                 state.completed_time = time.time()
                 stream_worker.last_pesan_ui = "BATCH SELESAI (100% OK)! SILAKAN MULAI TRANSAKSI BARU."
             else:
                 state.part_ok_popup = True
+                state.part_ok_ts = time.time()
                 stream_worker.last_pesan_ui = f"Part Manual OK! Sisa: {rem_qty} PCS. Lanjut part berikutnya."
 
     threading.Thread(target=log_inspeksi_db, args=(cur_id, cur_pno, "OK", 1.0, "MANUAL", op_name), daemon=True).start()

@@ -198,11 +198,16 @@ class KameraProses:
             return frame, pesan_ui
 
         if part_ok_active:
-            pesan_ui = f"PART OK! Sisa: {qty} PCS. Masukkan part berikutnya ke jig inspeksi."
-            color_status = (0, 255, 0)
-            pesan_ui_cv2 = pesan_ui
-            cv2.putText(frame, pesan_ui_cv2, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color_status, 2)
-            return frame, pesan_ui
+            if status != "COMPLETED" and getattr(state, 'part_ok_ts', 0) > 0 and (time.time() - state.part_ok_ts) > 2.0:
+                with state.lock:
+                    state.part_ok_popup = False
+                    part_ok_active = False
+            else:
+                pesan_ui = f"PART OK! Sisa: {qty} PCS. Masukkan part berikutnya ke jig inspeksi."
+                color_status = (0, 255, 0)
+                pesan_ui_cv2 = pesan_ui
+                cv2.putText(frame, pesan_ui_cv2, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color_status, 2)
+                return frame, pesan_ui
 
         if status == "RUNNING" and qty > 0:
             label_counts = {}
@@ -409,6 +414,7 @@ class KameraProses:
                                     if state.qty <= 0:
                                         state.status = "COMPLETED"
                                         state.part_ok_popup = True
+                                        state.part_ok_ts = time.time()
                                         state.flip_part_popup = False
                                         state.completed_time = time.time()
                                         threading.Thread(target=SisonSender.send_callback, args=(state.id_trans, 2)).start()
@@ -416,6 +422,7 @@ class KameraProses:
                                         color_status = (0, 255, 0)
                                     else:
                                         state.part_ok_popup = True
+                                        state.part_ok_ts = time.time()
                                         pesan_ui = "Part OK! Lanjut part berikutnya."
                                         color_status = (0, 255, 0)
                     else:

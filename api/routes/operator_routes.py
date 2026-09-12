@@ -27,7 +27,8 @@ class OperatorHeartbeatRequest(BaseModel):
     role: Optional[str] = "operator"
 
 class NGResolveRequest(BaseModel):
-    action: Optional[str] = "CONFIRM_NG"
+    action: Optional[str] = None
+    action_type: Optional[str] = None
     username: Optional[str] = ""
     pin: Optional[str] = ""
 
@@ -293,7 +294,8 @@ def resolve_ng(req: Optional[NGResolveRequest] = None, db: Session = Depends(get
     1. RETRY / DISMISS: Part sebenarnya bagus (model salah baca / reposisi part). Kamera langsung deteksi ulang part yang sama.
     2. CONFIRM_REPLACE / CONFIRM_NG: Part benar cacat (NG) dan diganti dengan part baru. Catat log NG, reset sisi ke Depan (F).
     """
-    action_type = (req.action if req and req.action else "RETRY").upper()
+    raw_action = (req.action or req.action_type or "RETRY") if req else "RETRY"
+    action_type = raw_action.upper()
     
     with state.lock:
         state.status = "RUNNING"

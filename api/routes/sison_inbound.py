@@ -1,4 +1,5 @@
 import os
+import threading
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -9,6 +10,7 @@ from sqlalchemy.sql import func
 from core import state
 from database import get_db, PartRule, Transaction, SessionLocal, SisonConfig, User, verify_password, log_audit_event
 from api.auth import decode_admin_token
+from integrations import SisonSender
 
 router = APIRouter()
 security = HTTPBearer(auto_error=False)
@@ -140,6 +142,9 @@ def execute_sison_start(req: StartRequest, db: Session) -> dict:
         state.part_ok_popup = False
         state.flip_part_popup = False
 
+    # Kirim Webhook Callback status 1 (Processing / In-Progress) ke Server SISON
+    threading.Thread(target=SisonSender.send_callback, args=(id_trans, 1), daemon=True).start()
+
     return {
         "status": "SUCCESS",
         "message": f"Transaksi {id_trans} diterima. Sistem Kamera Inspeksi RUNNING.",
@@ -149,9 +154,29 @@ def execute_sison_start(req: StartRequest, db: Session) -> dict:
         "sisi": curr_side
     }
 
+class ResetRequest(BaseModel):
+    id_trans: Optional[str] = ""
+
 @router.post("/start")
 def api_start(req: StartRequest, db: Session = Depends(get_db), _: bool = Depends(verify_api_key)):
     return execute_sison_start(req, db)
+
+@router.post("/reset")
+def api_reset(req: Optional[ResetRequest] = None, db: Session = Depends(get_db)):
+    """Reset sistem kamera ke STANDBY dan kirim callback status 0 ke SISON."""
+    with state.lock:
+        cur_id = req.id_trans if (req and req.id_trans) else (state.id_trans or "STANDBY")
+        state.reset_to_standby()
+
+    # Kirim Webhook Callback status 0 (Standby) ke Server SISON
+    threading.Thread(target=SisonSender.send_callback, args=(cur_id, 0), daemon=True).start()
+
+    return {
+        "status": "SUCCESS",
+        "message": "Sistem kamera di-reset ke STANDBY (Status 0).",
+        "id_trans": cur_id,
+        "status_code": 0
+    }
 
 @router.post("/override")
 def api_override(req: OverrideRequest, db: Session = Depends(get_db)):

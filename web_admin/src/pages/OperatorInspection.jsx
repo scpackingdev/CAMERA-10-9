@@ -339,11 +339,6 @@ export default function OperatorInspection() {
     ) {
       frontOkPlayedTsRef.current = notifTs;
       soundManager.playOk();
-      toast.success('✅ Sisi Depan OK! Silakan balik part ke Sisi Belakang (REAR)', {
-        id: 'flip-side-toast',
-        icon: '🔄',
-        duration: 3500
-      });
     }
   }, [telemetry.popups?.front_ok_notif_ts, telemetry.status]);
 

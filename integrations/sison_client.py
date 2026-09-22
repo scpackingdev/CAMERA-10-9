@@ -16,11 +16,11 @@ class SisonSender:
     def send_callback(id_trans: str, status: int = 2, max_retries: int = 3, retry_delay: float = 1.0) -> dict:
         """
         Mengirim status hasil inspeksi ke server SISON dengan Auto-Retry hingga 3x:
-        - 0  = Standby (Belum diproses)
-        - 1  = Processing (Sedang diproses / Running)
+        - 0  = Antri / Standby (Belum diproses)
+        - 1  = Progress (Sedang diproses / Running)
         - 2  = OK / Completed (Inspeksi selesai & lolos semua part)
-        - 98 = NG (Inspeksi ditolak / Part cacat / Reject)
-        - 99 = Cancel (Transaksi Kanban dibatalkan / Cancel Kanban)
+        - 98 = Cancel (Transaksi Kanban dibatalkan / Cancel Kanban)
+        - 99 = NG (Inspeksi ditolak / Part cacat / Reject)
         """
         url = get_callback_url()
         payload = {"id_trans": id_trans, "status": status}

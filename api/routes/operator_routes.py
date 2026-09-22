@@ -207,7 +207,7 @@ def operator_logout(req: Optional[OperatorLogoutPayload] = None, db: Session = D
 class CancelKanbanRequest(BaseModel):
     reason: Optional[str] = "Stok part pengganti habis"
     username: Optional[str] = ""
-    status: Optional[int] = 99  # 98 = NG (Reject), 99 = Cancel (Batal)
+    status: Optional[int] = 99  # Internal: 98 = NG (Reject), 99 = Cancel (Batal) — SISON: 99 = NG, 98 = CANCEL
 
 @router.post("/operator/manual-pass")
 def manual_pass():
@@ -317,32 +317,32 @@ def resolve_ng(req: Optional[NGResolveRequest] = None, db: Session = Depends(get
     stream_worker.ng_active = False
 
     if action_type in ["REJECT_NG", "CONFIRM_REJECT", "REJECT"]:
-        # Tolak transaksi secara langsung sebagai NG (Status 98)
+        # Tolak transaksi secara langsung sebagai NG (SISON status 99 = NG)
         with state.lock:
             state.reset_to_standby()
             stream_worker.ng_active = False
             stream_worker.last_pesan_ui = "STANDBY"
 
-        msg = f"Transaksi {cur_id} (Part: {cur_pno}) ditolak sebagai NG (Status 98) oleh {cur_op}."
+        msg = f"Transaksi {cur_id} (Part: {cur_pno}) ditolak sebagai NG (Status 99) oleh {cur_op}."
         threading.Thread(target=log_inspeksi_db, args=(cur_id, cur_pno, "NG", 0.0, "AI", cur_op), daemon=True).start()
-        threading.Thread(target=SisonSender.send_callback, args=(cur_id, 98), daemon=True).start()
+        threading.Thread(target=SisonSender.send_callback, args=(cur_id, 99), daemon=True).start()  # SISON: 99 = NG
         try:
             from sqlalchemy.sql import func
             from database import Transaction
             trans = db.query(Transaction).filter(Transaction.id_trans == cur_id).first()
             if trans:
-                trans.status = 98  # 98 = NG / REJECT
+                trans.status = 99  # 99 = NG / REJECT (sesuai standar SISON)
                 trans.end_time = func.now()
                 db.commit()
         except Exception as e:
-            print(f"[DB WARN] Gagal update status transaksi NG (98): {e}")
+            print(f"[DB WARN] Gagal update status transaksi NG (99): {e}")
 
         try:
             log_audit_event(db, cur_op, "REJECT_NG", msg)
         except Exception:
             pass
 
-        return {"success": True, "message": msg, "status": 98}
+        return {"success": True, "message": msg, "status": 99}
 
     elif action_type in ["CONFIRM_REPLACE", "CONFIRM_NG", "REPLACE", "CONFIRM", "YES"]:
         msg = f"Part dikonfirmasi cacat (NG) dan diganti part baru oleh {cur_op}."
@@ -381,12 +381,14 @@ def cancel_kanban(req: Optional[CancelKanbanRequest] = None, db: Session = Depen
         stream_worker.last_pesan_ui = "STANDBY"
 
     reason_str = req.reason.strip() if (req and req.reason and req.reason.strip()) else "Stok part pengganti habis"
-    status_code = 98 if (req and req.status == 98) else 99
-    status_label = "NG (REJECT)" if status_code == 98 else "BATAL (CANCEL)"
-    action_type = "REJECT_NG" if status_code == 98 else "CANCEL_KANBAN"
+    is_ng = (req and req.status == 98)                  # Internal: req.status 98 = NG, 99 = Cancel
+    sison_status = 99 if is_ng else 98                  # SISON: 99 = NG, 98 = CANCEL
+    internal_status = 99 if is_ng else 98               # DB ikut standar SISON
+    status_label = "NG (REJECT)" if is_ng else "BATAL (CANCEL)"
+    action_type = "REJECT_NG" if is_ng else "CANCEL_KANBAN"
 
-    # Kirim Webhook Callback status (98 = NG, 99 = CANCEL) ke Server SISON
-    threading.Thread(target=SisonSender.send_callback, args=(cur_id, status_code), daemon=True).start()
+    # Kirim Webhook Callback status ke Server SISON (99 = NG, 98 = CANCEL)
+    threading.Thread(target=SisonSender.send_callback, args=(cur_id, sison_status), daemon=True).start()
 
     # Update status transaksi di database lokal
     try:
@@ -394,25 +396,25 @@ def cancel_kanban(req: Optional[CancelKanbanRequest] = None, db: Session = Depen
         from database import Transaction
         trans = db.query(Transaction).filter(Transaction.id_trans == cur_id).first()
         if trans:
-            trans.status = status_code
+            trans.status = internal_status
             trans.end_time = func.now()
             db.commit()
     except Exception as e:
-        print(f"[DB WARN] Gagal update status transaksi {status_code}: {e}")
+        print(f"[DB WARN] Gagal update status transaksi {internal_status}: {e}")
 
     # Catat audit log
     log_audit_event(
         db, 
         cur_op, 
         action_type, 
-        f"Transaksi {cur_id} (Part: {cur_pno}) diakhiri sebagai {status_label} (Status: {status_code}) oleh {cur_op}. Sisa {rem_qty}/{tgt_qty} PCS. Alasan: {reason_str}"
+        f"Transaksi {cur_id} (Part: {cur_pno}) diakhiri sebagai {status_label} (Status: {sison_status}) oleh {cur_op}. Sisa {rem_qty}/{tgt_qty} PCS. Alasan: {reason_str}"
     )
 
     return {
         "success": True, 
-        "message": f"Transaksi {cur_id} berhasil diakhiri ({status_label} - Status: {status_code}). Sistem kembali ke STANDBY.",
+        "message": f"Transaksi {cur_id} berhasil diakhiri ({status_label} - Status: {sison_status}). Sistem kembali ke STANDBY.",
         "id_trans": cur_id,
-        "status": status_code
+        "status": sison_status
     }
 
 @router.post("/operator/clear-popup")

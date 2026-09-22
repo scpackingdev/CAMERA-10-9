@@ -22,27 +22,48 @@ class SisonSender:
         - 98 = Cancel (Transaksi Kanban dibatalkan / Cancel Kanban)
         - 99 = NG (Inspeksi ditolak / Part cacat / Reject)
         """
+        _STATUS_LABEL = {0: "Standby", 1: "Progress", 2: "OK", 98: "Cancel", 99: "NG"}
+        status_label = _STATUS_LABEL.get(status, f"Unknown({status})")
+
         url = get_callback_url()
         payload = {"id_trans": id_trans, "status": status}
         last_error = None
 
+        print(f"[SISON] ══════════════════════════════════════")
+        print(f"[SISON] Mulai kirim callback ke SISON")
+        print(f"[SISON] URL     : {url}")
+        print(f"[SISON] Payload : id_trans={id_trans}, status={status} ({status_label})")
+        print(f"[SISON] Max retry: {max_retries}x, delay: {retry_delay}s")
+        print(f"[SISON] ══════════════════════════════════════")
+
         for attempt in range(1, max_retries + 1):
+            print(f"[SISON] >> Percobaan {attempt}/{max_retries} ...")
             try:
                 res = requests.post(url, json=payload, timeout=2.5)
+                response_body = res.text[:300] if res.text else "(kosong)"
                 if res.status_code in [200, 201, 204]:
-                    print(f"[SISON CALLBACK] Sukses terkirim ke {url} (Percobaan ke-{attempt}): {payload} | Status: {res.status_code}")
+                    print(f"[SISON] ✓ BERHASIL (Percobaan {attempt}/{max_retries})")
+                    print(f"[SISON]   HTTP Status : {res.status_code}")
+                    print(f"[SISON]   Response    : {response_body}")
                     return {"success": True, "attempt": attempt, "status_code": res.status_code}
                 else:
-                    last_error = f"HTTP Status {res.status_code}: {res.text[:100]}"
-                    print(f"[SISON CALLBACK WARN] Percobaan ke-{attempt} gagal dengan kode {res.status_code}. Menunggu {retry_delay}s...")
+                    last_error = f"HTTP {res.status_code}: {res.text[:200]}"
+                    print(f"[SISON] ✗ GAGAL (Percobaan {attempt}/{max_retries})")
+                    print(f"[SISON]   HTTP Status : {res.status_code}")
+                    print(f"[SISON]   Response    : {response_body}")
             except Exception as e:
                 last_error = str(e)
-                print(f"[SISON CALLBACK WARN] Percobaan ke-{attempt} gagal: {e}. Menunggu {retry_delay}s...")
+                print(f"[SISON] ✗ ERROR (Percobaan {attempt}/{max_retries})")
+                print(f"[SISON]   Exception   : {e}")
 
             if attempt < max_retries:
+                print(f"[SISON]   Menunggu {retry_delay}s sebelum retry ...")
                 time.sleep(retry_delay)
 
-        print(f"[SISON CALLBACK OFFLINE] Gagal setelah {max_retries}x percobaan ke {url}. Data: {payload} | Notice: {last_error}")
+        print(f"[SISON] ✗✗ OFFLINE — Gagal setelah {max_retries}x percobaan")
+        print(f"[SISON]    URL      : {url}")
+        print(f"[SISON]    Payload  : {payload}")
+        print(f"[SISON]    Error    : {last_error}")
         return {"success": False, "attempts": max_retries, "error": last_error}
 
     @staticmethod

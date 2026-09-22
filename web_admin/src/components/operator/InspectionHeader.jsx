@@ -73,8 +73,8 @@ export default function InspectionHeader({
             </div>
           )}
           {telemetry.p_no && telemetry.status !== 'STANDBY' && telemetry.status !== 'COMPLETED' && (
-            <div className="text-xs sm:text-sm font-black text-emerald-300 mt-1 bg-emerald-950/60 py-0.5 px-3 rounded-full inline-block border border-emerald-500/30">
-              SISI: {telemetry.current_side === 'F' ? 'FRONT (DEPAN)' : telemetry.current_side === 'R' ? 'REAR (BELAKANG)' : telemetry.current_side}
+            <div className="text-base sm:text-lg font-black text-emerald-300 mt-1 bg-emerald-950/70 py-1 px-5 rounded-full inline-block border-2 border-emerald-400/50 tracking-widest shadow-lg shadow-emerald-900/40">
+              TAMPAK: {telemetry.current_side === 'FRONT' ? 'DEPAN' : telemetry.current_side === 'REAR' ? 'BELAKANG' : telemetry.current_side}
             </div>
           )}
         </div>
